@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hutan Kelam PSX - The Abyss & Jumpscare Maut</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        canvas {
+            width: 100vw !important;
+            height: 100vh !important;
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 45px;
+            color: #aa0000;
+            letter-spacing: -2px;
+            text-shadow: 2px 2px 0px #000;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-size: 16px;
+            color: #ccc;
+            margin: 5px 0;
+        }
+
+        .key {
+            background: #222;
+            padding: 2px 6px;
+            border-radius: 2px;
+            border: 1px solid #555;
+            color: #fff;
+        }
+
+        .btn {
+            margin-top: 25px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            background: #330000;
+            color: white;
+            border: 2px solid #770000;
+            font-family: 'Courier New', Courier, monospace;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: #aa0000;
+        }
+
+        #hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 18px;
+            text-shadow: 1px 1px 0px #000;
+            z-index: 5;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .highlight {
+            color: #88ff88;
+            font-weight: bold;
+        }
+
+        .warning-text {
+            color: #ff5555;
+            font-weight: bold;
+        }
+
+        .bar-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 5;
+        }
+
+        .bar-box {
+            width: 100%;
+            height: 14px;
+            border: 2px solid #444;
+            background: rgba(0, 0, 0, 0.7);
+            position: relative;
+        }
+
+        .bar-label {
+            position: absolute;
+            top: -20px;
+            font-size: 14px;
+            color: #fff;
+            text-shadow: 1px 1px 0px #000;
+            font-weight: bold;
+        }
+
+        #stamina-fill {
+            width: 100%;
+            height: 100%;
+            background: #ccc;
+            transition: width 0.1s linear;
+        }
+
+        #hunger-fill {
+            width: 100%;
+            height: 100%;
+            background: #aa0000;
+            transition: width 1s linear;
+        }
+
+        #interaction-prompt {
+            position: absolute;
+            bottom: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffeb3b;
+            font-size: 18px;
+            display: none;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 5;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 5px 15px;
+            border: 1px solid #ffeb3b;
+            font-weight: bold;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 16px;
+            z-index: 5;
+            pointer-events: none;
+            display: none;
+        }
+
+        #subtitle {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: #fff;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 6;
+            text-align: center;
+            width: 80%;
+            display: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+        }
+
+        #monster-warning {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 60px;
+            color: #ff0000;
+            text-shadow: 3px 3px 0px #000;
+            font-weight: bold;
+            z-index: 6;
+            display: none;
+            animation: shake 0.05s infinite;
+        }
+
+        #game-over-screen,
+        #ending-screen {
+            display: none;
+            z-index: 20;
+        }
+
+        #game-over-screen h1 {
+            font-size: 70px;
+            color: #ff0000;
+            animation: shake 0.1s infinite;
+        }
+
+        #ending-screen {
+            background-color: #000;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translate(3px, 3px);
+            }
+
+            50% {
+                transform: translate(-3px, -3px);
+            }
+
+            100% {
+                transform: translate(3px, -3px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="hud">
+        Kertas Ritual: <span id="score">0</span> / 7<br>
+        Gandum di Tangan: <span id="wheat-count" class="highlight">0</span>
+    </div>
+
+    <div class="bar-container" id="bars">
+        <div class="bar-box"><span class="bar-label">STAMINA LARI</span>
+            <div id="stamina-fill"></div>
+        </div>
+        <div class="bar-box"><span class="bar-label warning-text">AMARAH KEGELAPAN (Lempar Gandum ke Goa!)</span>
+            <div id="hunger-fill"></div>
+        </div>
+    </div>
+
+    <div id="interaction-prompt">Tekan <span class="key">E</span></div>
+    <div id="subtitle"></div>
+    <div id="monster-warning">DIA BANGKIT</div>
+    <div id="crosshair">+</div>
+
+    <div id="start-screen" class="overlay">
+        <h1>HUTAN KELAM: THE ABYSS</h1>
+        <p>Kertas tersebar di pepohonan dekat <span style="color:#aaa;">mobilmu</span>.</p>
+        <p>Lalu ikuti <span style="color:#00ff00; font-weight:bold;">Pilar Cahaya Hijau</span> untuk menemukan Goa
+            Kegelapan.</p>
+        <p>Panen gandum di luar goa, lalu <b>lempar ke mulut goa</b> sebelum waktunya habis.</p>
+        <p style="margin-top:20px;"><span class="key">WASD</span> Gerak | <span class="key">Shift</span> Lari | <span
+                class="key">F</span> Senter | <span class="key">E</span> Interaksi</p>
+        <button class="btn" id="start-btn">TURUN DARI MOBIL</button>
+    </div>
+
+    <div id="game-over-screen" class="overlay">
+        <h1>MATI</h1>
+        <p>Kertas dikumpulkan: <span id="final-score-lose">0</span> / 7</p>
+        <button class="btn" onclick="window.location.reload()">COBA LAGI</button>
+    </div>
+
+    <div id="ending-screen" class="overlay">
+        <h1 id="ending-title" style="color: #fff;">...</h1>
+        <p id="ending-desc" style="font-size: 20px;">...</p>
+        <button class="btn" style="margin-top: 40px;" onclick="window.location.reload()">MAIN LAGI</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+
+    <script>
+        const RENDER_WIDTH = 400, RENDER_HEIGHT = 300;
+        let camera, scene, renderer, controls;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isRunningInput = false;
+        let prevTime = performance.now();
+        const direction = new THREE.Vector3();
+
+        let flashlight, flashlightGroup, flashlightActive = true;
+        let audioCtx, windFilter;
+        let enemy, carGroup;
+
+        let notes = [], wheats = [], obstacles = [], particles = [], campfires = [];
+        let notesCollected = 0, wheatInventory = 0;
+        let nearbyNote = null, nearbyCar = false, nearbyWheat = null, nearAbyss = false;
+
+        const carPos = new THREE.Vector3(0, 0, 15);
+        const cavePos = new THREE.Vector3(120, 0, -150);
+
+        let stamina = 100, isExhausted = false;
+        let hunger = 100;
+        const hungerDrainRate = 100 / 180; // 3 Menit
+        let monsterAwake = false;
+
+        let footstepTimer = 0, monsterFootstepTimer = 0, bobbingTimer = 0, jumpscareTimer = 0;
+        let gameState = 'start';
+
+        function getTerrainHeight(x, z) {
+            let d = Math.sqrt(x * x + z * z);
+            let h = Math.sin(x * 0.015) * Math.cos(z * 0.015) * 8 + Math.sin(x * 0.05) * Math.cos(z * 0.03) * 2;
+            if (d > 300) h += Math.pow((d - 300) * 0.05, 1.8);
+            let dCar = Math.hypot(x - carPos.x, z - carPos.z); if (dCar < 30) h = h * (dCar / 30);
+            let dCave = Math.hypot(x - cavePos.x, z - cavePos.z); if (dCave < 50) h = h * (dCave / 50);
+            return h;
+        }
+
+        init();
+        animate();
+
+        function createTexture(w, h, colorFunc) {
+            const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d'); const data = ctx.getImageData(0, 0, w, h);
+            for (let i = 0; i < w * h; i++) {
+                const c = colorFunc(); const j = i * 4;
+                data.data[j] = c.r; data.data[j + 1] = c.g; data.data[j + 2] = c.b; data.data[j + 3] = 255;
+            }
+            ctx.putImageData(data, 0, 0);
+            const tex = new THREE.CanvasTexture(canvas); tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; return tex;
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x010103);
+            scene.fog = new THREE.FogExp2(0x010103, 0.008);
+
+            camera = new THREE.PerspectiveCamera(75, RENDER_WIDTH / RENDER_HEIGHT, 0.1, 800);
+
+            scene.add(new THREE.AmbientLight(0x1a1a25));
+            const moonLight = new THREE.DirectionalLight(0x333344, 1.0); moonLight.position.set(100, 200, -100); scene.add(moonLight);
+
+            flashlightGroup = new THREE.Group(); camera.add(flashlightGroup); scene.add(camera);
+            const hand = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.15), new THREE.MeshLambertMaterial({ color: 0xd2a88a }));
+            const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.4), new THREE.MeshLambertMaterial({ color: 0x112211 })); sleeve.rotation.x = Math.PI / 2;
+            hand.position.set(0.3, -0.3, -0.3); sleeve.position.set(0.3, -0.3, -0.05); flashlightGroup.add(hand, sleeve);
+
+            const flModel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.25, 8), new THREE.MeshLambertMaterial({ color: 0x222222 }));
+            flModel.rotation.x = Math.PI / 2; flModel.position.set(0.3, -0.3, -0.4); flashlightGroup.add(flModel);
+
+            flashlight = new THREE.SpotLight(0xfff0dd, 12, 150, Math.PI / 4, 0.5, 2); flashlight.position.set(0.3, -0.3, -0.4);
+            const targetObject = new THREE.Object3D(); targetObject.position.set(0.3, -0.3, -2);
+            flashlightGroup.add(targetObject); flashlight.target = targetObject; flashlightGroup.add(flashlight);
+
+            const groundMat = new THREE.MeshLambertMaterial({ map: createTexture(64, 64, () => { const v = Math.random(); return { r: 5 + v * 10, g: 15 + v * 20, b: 5 + v * 10 }; }) });
+            const groundGeo = new THREE.PlaneGeometry(1200, 1200, 100, 100);
+            const posAttr = groundGeo.attributes.position;
+            for (let i = 0; i < posAttr.count; i++) posAttr.setZ(i, getTerrainHeight(posAttr.getX(i), posAttr.getY(i)));
+            groundGeo.computeVertexNormals();
+            const ground = new THREE.Mesh(groundGeo, groundMat); ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+            const trunkMat = new THREE.MeshLambertMaterial({ map: createTexture(16, 32, () => { const c = 20 + Math.random() * 20; return { r: c + 10, g: c, b: c - 10 }; }) });
+            const rockMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+
+            // MOBIL
+            carGroup = new THREE.Group();
+            const carBodyMat = new THREE.MeshLambertMaterial({ color: 0x550000 }); const glassMat = new THREE.MeshLambertMaterial({ color: 0x223344, transparent: true, opacity: 0.7 }); const wheelMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+            const carBody = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.2, 9), carBodyMat); carBody.position.y = 1.2;
+            const carCabin = new THREE.Mesh(new THREE.BoxGeometry(3.8, 1.5, 5), glassMat); carCabin.position.set(0, 2.5, -0.5);
+            carGroup.add(carBody, carCabin);
+            carGroup.position.set(carPos.x, getTerrainHeight(carPos.x, carPos.z), carPos.z); scene.add(carGroup); obstacles.push({ x: carPos.x, z: carPos.z, radius: 4 });
+
+            // GOA & ABYSS
+            const caveGroup = new THREE.Group();
+            for (let i = 0; i < 15; i++) {
+                let rx = (Math.random() - 0.5) * 30; let rz = (Math.random() - 0.5) * 20 - 10; let ry = Math.random() * 15;
+                if (Math.abs(rx) < 8 && ry < 10 && rz > -5) continue;
+                let rScale = 5 + Math.random() * 8; const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rScale), rockMat); rock.position.set(rx, ry, rz); caveGroup.add(rock);
+            }
+            const abyssMesh = new THREE.Mesh(new THREE.PlaneGeometry(15, 12), new THREE.MeshBasicMaterial({ color: 0x000000 })); abyssMesh.position.set(0, 5, -8); caveGroup.add(abyssMesh);
+
+            const beaconMesh = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 500, 16), new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.3, fog: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); beaconMesh.position.y = 250;
+            const beaconLight = new THREE.PointLight(0x00ff00, 15, 150); beaconLight.position.y = 10; caveGroup.add(beaconMesh, beaconLight);
+
+            caveGroup.position.set(cavePos.x, getTerrainHeight(cavePos.x, cavePos.z), cavePos.z);
+            caveGroup.rotation.y = Math.atan2(carPos.x - cavePos.x, carPos.z - cavePos.z);
+            scene.add(caveGroup); obstacles.push({ x: cavePos.x, z: cavePos.z, radius: 15 });
+
+            // GANDUM
+            const wheatMat = new THREE.MeshLambertMaterial({ color: 0x88cc33, side: THREE.DoubleSide });
+            const wGeo1 = new THREE.PlaneGeometry(1.5, 3); const wGeo2 = wGeo1.clone(); wGeo2.rotateY(Math.PI / 2);
+            for (let i = 0; i < 30; i++) {
+                let angle = (Math.random() - 0.5) * Math.PI; let dist = 10 + Math.random() * 25;
+                let wx = cavePos.x + Math.sin(caveGroup.rotation.y + angle) * dist; let wz = cavePos.z + Math.cos(caveGroup.rotation.y + angle) * dist;
+                const wheatGroup = new THREE.Group();
+                const part1 = new THREE.Mesh(wGeo1, wheatMat); const part2 = new THREE.Mesh(wGeo2, wheatMat);
+                wheatGroup.add(part1, part2); wheatGroup.position.set(wx, getTerrainHeight(wx, wz) + 1.5, wz); wheatGroup.rotation.y = Math.random() * Math.PI; scene.add(wheatGroup);
+                const wHit = new THREE.Mesh(new THREE.BoxGeometry(2, 4, 2), new THREE.MeshBasicMaterial({ visible: false }));
+                wHit.position.copy(wheatGroup.position); scene.add(wHit); wheats.push({ model: wheatGroup, hitbox: wHit });
+            }
+
+            // POHON & KERTAS
+            const trunkGeo = new THREE.CylinderGeometry(0.5, 0.8, 15, 6); const leavesGeo = new THREE.ConeGeometry(4, 10, 5); const leavesMat = new THREE.MeshLambertMaterial({ color: 0x051505 });
+            let noteTrees = [];
+            for (let i = 0; i < 400; i++) {
+                let posX = (Math.random() - 0.5) * 1000; let posZ = (Math.random() - 0.5) * 1000;
+                let dCar = Math.hypot(posX - carPos.x, posZ - carPos.z); let dCave = Math.hypot(posX - cavePos.x, posZ - cavePos.z);
+                if (dCar < 10 || dCave < 30) continue;
+                let posY = getTerrainHeight(posX, posZ);
+                const tree = new THREE.Group(); const trunk = new THREE.Mesh(trunkGeo, trunkMat); trunk.position.y = 7.5; tree.add(trunk);
+                for (let j = 0; j < 3; j++) { const leaves = new THREE.Mesh(leavesGeo, leavesMat); leaves.position.y = 12 + j * 3; leaves.scale.set(1 - j * 0.2, 1, 1 - j * 0.2); tree.add(leaves); }
+                tree.position.set(posX, posY, posZ); let scale = 0.8 + Math.random() * 0.5; tree.scale.set(scale, scale, scale); scene.add(tree); obstacles.push({ x: posX, z: posZ, radius: 1.0 * scale }); noteTrees.push(tree);
+            }
+            let potentialNoteTrees = noteTrees.filter(t => Math.hypot(t.position.x - carPos.x, t.position.z - carPos.z) > 10 && Math.hypot(t.position.x - carPos.x, t.position.z - carPos.z) < 100);
+            if (potentialNoteTrees.length < 7) potentialNoteTrees = noteTrees;
+            const noteMat = new THREE.MeshBasicMaterial({ map: createTexture(32, 32, () => Math.random() > 0.1 ? { r: 220, g: 220, b: 200 } : { r: 20, g: 20, b: 20 }), side: THREE.DoubleSide });
+            potentialNoteTrees.sort(() => Math.random() - 0.5);
+            for (let i = 0; i < 7; i++) {
+                const note = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.7), noteMat); let angle = Math.random() * Math.PI * 2; note.position.set(Math.cos(angle) * 0.7, 1.5 + Math.random(), Math.sin(angle) * 0.7); note.rotation.set((Math.random() - 0.5) * 0.2, -angle + Math.PI / 2, 0); potentialNoteTrees[i].add(note); notes.push(note);
+            }
+
+            // --- MONSTER & WAJAH KAMBING.JPEG ---
+            enemy = new THREE.Group();
+            const enemyMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.2, 4.5, 6), enemyMat); body.position.y = 3.5;
+
+            const headGroup = new THREE.Group();
+            headGroup.position.y = 6.2;
+            const headBox = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.8), enemyMat);
+
+            // TEKSTUR WAJAH KAMBING (fog: false biar menyala di gelap)
+            const faceTex = new THREE.TextureLoader().load('Kambing.jpeg');
+            const faceMat = new THREE.MeshBasicMaterial({ map: faceTex, color: 0xffffff, fog: false });
+            const facePlane = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1), faceMat);
+            facePlane.position.z = 0.41;
+
+            headGroup.add(headBox, facePlane);
+            enemy.userData.head = headGroup;
+
+            const lLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.1, 3.5), enemyMat); lLeg.position.set(-0.3, 1.75, 0); const rLeg = lLeg.clone(); rLeg.position.x = 0.3; enemy.userData.lLeg = lLeg; enemy.userData.rLeg = rLeg;
+            const lArm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.05, 4.5), enemyMat); lArm.position.set(-0.6, 3.5, 0); const rArm = lArm.clone(); rArm.position.x = 0.6; enemy.userData.lArm = lArm; enemy.userData.rArm = rArm;
+            enemy.add(body, headGroup, lLeg, rLeg, lArm, rArm);
+            enemy.position.set(0, -100, 0); scene.add(enemy);
+
+            // CONTROLS & RENDERER
+            renderer = new THREE.WebGLRenderer({ antialias: false }); renderer.setSize(RENDER_WIDTH, RENDER_HEIGHT, false); renderer.setPixelRatio(1); document.body.appendChild(renderer.domElement);
+            controls = new THREE.PointerLockControls(camera, document.body);
+
+            document.getElementById('start-btn').addEventListener('click', () => {
+                if (gameState === 'start') {
+                    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    controls.lock(); startAmbientSound(); startCutscene();
+                }
+            });
+            controls.addEventListener('unlock', () => { if (gameState === 'playing') { toggleUI(false); } });
+            controls.addEventListener('lock', () => { if (gameState === 'playing') { toggleUI(true); } });
+            scene.add(controls.getObject());
+
+            // --- INPUT KEYBOARD (ADA TOMBOL P) ---
+            document.addEventListener('keydown', (e) => {
+                if (gameState !== 'playing' || !controls.isLocked) return;
+                switch (e.code) {
+                    case 'KeyW': moveForward = true; break; case 'KeyA': moveLeft = true; break;
+                    case 'KeyS': moveBackward = true; break; case 'KeyD': moveRight = true; break;
+                    case 'ShiftLeft': case 'ShiftRight': isRunningInput = true; break;
+                    case 'KeyF': flashlightActive = !flashlightActive; flashlightGroup.visible = flashlightActive; break;
+                    case 'KeyE': handleInteraction(); break;
+                    case 'KeyP': hunger = 0; break; // TOMBOL P UNTUK SPAWN MONSTER INSTAN
+                }
+            });
+            document.addEventListener('keyup', (e) => {
+                switch (e.code) {
+                    case 'KeyW': moveForward = false; break; case 'KeyA': moveLeft = false; break;
+                    case 'KeyS': moveBackward = false; break; case 'KeyD': moveRight = false; break;
+                    case 'ShiftLeft': case 'ShiftRight': isRunningInput = false; break;
+                }
+            });
+            window.addEventListener('resize', () => { camera.aspect = RENDER_WIDTH / RENDER_HEIGHT; camera.updateProjectionMatrix(); });
+        }
+
+        function toggleUI(show) {
+            let disp = show ? 'block' : 'none'; document.getElementById('hud').style.display = disp; document.getElementById('bars').style.display = show ? 'flex' : 'none'; document.getElementById('crosshair').style.display = disp;
+        }
+        function showSub(text, time = 4000) {
+            const sub = document.getElementById('subtitle'); sub.innerText = text; sub.style.display = 'block'; setTimeout(() => { if (gameState === 'playing') sub.style.display = 'none'; }, time);
+        }
+
+        function handleInteraction() {
+            if (nearbyNote) {
+                nearbyNote.parent.remove(nearbyNote); notes = notes.filter(n => n !== nearbyNote); notesCollected++;
+                document.getElementById('score').innerText = notesCollected; nearbyNote = null; document.getElementById('interaction-prompt').style.display = 'none';
+                if (notesCollected === 7) { showSub("Aku dapat semua kertasnya! Kembali ke mobil secepatnya!", 5000); document.getElementById('hud').innerHTML = "<span class='highlight'>OBJEKTIF: KEMBALI KE MOBIL!</span>"; } else { showSub("Dapat (" + notesCollected + "/7)...", 3000); }
+            }
+            else if (nearbyWheat) {
+                scene.remove(nearbyWheat.model); scene.remove(nearbyWheat.hitbox); wheats = wheats.filter(w => w !== nearbyWheat);
+                wheatInventory++; document.getElementById('wheat-count').innerText = wheatInventory; nearbyWheat = null; document.getElementById('interaction-prompt').style.display = 'none'; playEatSound();
+                if (wheatInventory === 1) showSub("Aku dapat Gandum. Bawa ini ke mulut goa.", 4000);
+            }
+            else if (nearAbyss) {
+                if (wheatInventory > 0) { wheatInventory--; document.getElementById('wheat-count').innerText = wheatInventory; hunger += 40; if (hunger > 100) hunger = 100; playAbyssEatSound(); showSub("Kegelapan menelan gandum itu... Kemarahannya mereda.", 3000); }
+            }
+            else if (nearbyCar) {
+                if (notesCollected < 7) { triggerEnding("PENGECUT", "Kau lari dari kutukan hutan ini tanpa menyelesaikannya.", false); } else { triggerEndingDua(); }
+            }
+        }
+
+        function startCutscene() {
+            gameState = 'cutscene'; document.getElementById('start-screen').style.display = 'none';
+            controls.getObject().position.set(carPos.x - 6, getTerrainHeight(carPos.x - 6, carPos.z) + 2.5, carPos.z); camera.rotation.y = Math.PI;
+            showSub("Pilar cahaya hijau itu... mungkin ada makanan di sana.", 4000);
+            setTimeout(() => showSub("Sesuatu di Goa itu sangat lapar. Aku harus memanen gandum untuk memberinya makan...", 5000), 5000);
+            setTimeout(() => { document.getElementById('subtitle').style.display = 'none'; gameState = 'playing'; toggleUI(true); }, 10000);
+        }
+
+        // --- AUDIO JUMPSCARE MP3 ---
+        function playJumpscareSound() {
+            let jumpscareAudio = new Audio('endo sound jumpscare_ TJOCR_SM.mp3'); // Pastikan suara.mp3 ada di folder lu
+            jumpscareAudio.volume = 1.0;
+            jumpscareAudio.play().catch(e => console.log("Audio play failed:", e));
+        }
+
+        function triggerGameOver() {
+            gameState = 'gameover'; controls.unlock(); jumpscareTimer = 0; playJumpscareSound(); document.getElementById('final-score-lose').innerText = notesCollected;
+            setTimeout(() => { document.getElementById('game-over-screen').style.display = 'flex'; }, 2500);
+        }
+
+        function triggerEnding(title, desc, isScary) { gameState = 'ending'; controls.unlock(); if (isScary) playJumpscareSound(); document.getElementById('ending-title').innerText = title; document.getElementById('ending-title').style.color = isScary ? "#ff0000" : "#ffffff"; document.getElementById('ending-desc').innerText = desc; setTimeout(() => { document.getElementById('ending-screen').style.display = 'flex'; }, isScary ? 1500 : 500); }
+        function triggerEndingDua() { gameState = 'ending_sequence'; showSub("Ban mobilku... Siapa yang menghancurkannya?!", 3000); setTimeout(() => { camera.rotation.y += Math.PI; let dir = new THREE.Vector3(); camera.getWorldDirection(dir); enemy.position.copy(camera.position).add(dir.multiplyScalar(2.0)); enemy.position.y = getTerrainHeight(enemy.position.x, enemy.position.z) + 3; enemy.lookAt(camera.position.x, camera.position.y, camera.position.z); triggerEnding("TERLAMBAT", "Kegelapan menelanmu bulat-bulat.", true); }, 2500); }
+
+        function startAmbientSound() { if (!audioCtx) return; const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate); const data = buffer.getChannelData(0); for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1; const noise = audioCtx.createBufferSource(); noise.buffer = buffer; noise.loop = true; windFilter = audioCtx.createBiquadFilter(); windFilter.type = 'lowpass'; windFilter.frequency.value = 100; noise.connect(windFilter); windFilter.connect(audioCtx.destination); noise.start(); }
+        function playFootstepSound(isFast) { if (!audioCtx || audioCtx.state === 'suspended') return; const duration = 0.15; let osc = audioCtx.createOscillator(); let oscGain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(isFast ? 75 : 55, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + duration); oscGain.gain.setValueAtTime(isFast ? 0.4 : 0.2, audioCtx.currentTime); oscGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration); osc.connect(oscGain); oscGain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + duration); const bufferSize = audioCtx.sampleRate * duration; const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); const data = buffer.getChannelData(0); for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1; const noise = audioCtx.createBufferSource(); noise.buffer = buffer; const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 800; const noiseGain = audioCtx.createGain(); noiseGain.gain.setValueAtTime(isFast ? 0.3 : 0.15, audioCtx.currentTime); noiseGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration); noise.connect(filter); filter.connect(noiseGain); noiseGain.connect(audioCtx.destination); noise.start(); }
+        function playMonsterFootstepSound() { if (!audioCtx || audioCtx.state === 'suspended') return; let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.type = 'square'; osc.frequency.setValueAtTime(25, audioCtx.currentTime); gain.gain.setValueAtTime(0.9, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15); }
+        function playEatSound() { if (!audioCtx) return; let osc = audioCtx.createOscillator(); osc.type = 'square'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1); osc.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.1); }
+        function playAbyssEatSound() { if (!audioCtx) return; let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); osc.type = 'sine'; osc.frequency.setValueAtTime(50, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(20, audioCtx.currentTime + 2); gain.gain.setValueAtTime(0.8, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 2); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 2); }
+
+        function checkCollision(x, z) { for (let i = 0; i < obstacles.length; i++) { let dx = x - obstacles[i].x; let dz = z - obstacles[i].z; if (Math.sqrt(dx * dx + dz * dz) < obstacles[i].radius + 0.5) return true; } return false; }
+
+        function animate() {
+            requestAnimationFrame(animate); const time = performance.now(); let delta = (time - prevTime) / 1000; if (delta > 0.1) delta = 0.1;
+            const playerPos = controls.getObject().position;
+
+            if (gameState === 'cutscene') {
+                bobbingTimer += delta * 2; camera.position.y = getTerrainHeight(playerPos.x, playerPos.z) + 2.5 + Math.sin(bobbingTimer) * 0.05; renderer.render(scene, camera); prevTime = time; return;
+            }
+            if (gameState === 'gameover' || gameState === 'ending') {
+                if (gameState === 'gameover') {
+                    jumpscareTimer += delta;
+                    if (jumpscareTimer < 0.1) enemy.lookAt(camera.position.x, enemy.position.y, camera.position.z);
+                    let dir = new THREE.Vector3(); enemy.getWorldDirection(dir);
+                    let targetPos = enemy.position.clone().add(dir.multiplyScalar(1.2));
+                    targetPos.y = enemy.position.y + 6.2;
+                    camera.position.lerp(targetPos, delta * 5);
+                    camera.lookAt(enemy.position.x, enemy.position.y + 6.2, enemy.position.z);
+                    if (jumpscareTimer > 1.2) enemy.userData.head.scale.addScalar(delta * 25);
+                } else {
+                    controls.getObject().position.x += (Math.random() - 0.5) * 0.2; controls.getObject().position.z += (Math.random() - 0.5) * 0.2;
+                }
+                renderer.render(scene, camera); prevTime = time; return;
+            }
+
+            if (gameState === 'playing' && controls.isLocked) {
+                const isMovingInput = moveForward || moveBackward || moveLeft || moveRight;
+                let isActuallyRunning = isRunningInput && !isExhausted;
+
+                if (isActuallyRunning && isMovingInput) { stamina -= 20 * delta; if (stamina <= 0) { stamina = 0; isExhausted = true; } }
+                else { stamina += 10 * delta; if (stamina >= 25) isExhausted = false; if (stamina > 100) stamina = 100; }
+                document.getElementById('stamina-fill').style.width = stamina + '%'; document.getElementById('stamina-fill').style.background = isExhausted ? '#444' : '#ccc';
+
+                hunger -= hungerDrainRate * delta;
+                if (hunger <= 0 && !monsterAwake) {
+                    hunger = 0; monsterAwake = true; document.getElementById('monster-warning').style.display = 'block';
+                    enemy.position.set(cavePos.x, getTerrainHeight(cavePos.x, cavePos.z), cavePos.z - 5); setTimeout(() => { document.getElementById('monster-warning').style.display = 'none'; }, 3000);
+                }
+                document.getElementById('hunger-fill').style.width = hunger + '%';
+
+                direction.z = Number(moveForward) - Number(moveBackward); direction.x = Number(moveRight) - Number(moveLeft); direction.normalize();
+                let moveSpeed = isActuallyRunning ? 15.0 : 6.0;
+
+                const prevX = playerPos.x; const prevZ = playerPos.z;
+                if (moveForward || moveBackward) controls.moveForward(direction.z * moveSpeed * delta);
+                if (moveLeft || moveRight) controls.moveRight(direction.x * moveSpeed * delta);
+                if (checkCollision(playerPos.x, playerPos.z)) { playerPos.x = prevX; playerPos.z = prevZ; }
+
+                const isMoving = isMovingInput && (playerPos.x !== prevX || playerPos.z !== prevZ);
+                if (isMoving) {
+                    let stepInt = isActuallyRunning ? 0.3 : 0.55; let bobInt = isActuallyRunning ? 0.15 : 0.05;
+                    footstepTimer += delta; bobbingTimer += delta * (isActuallyRunning ? 15 : 9);
+                    if (footstepTimer >= stepInt) { playFootstepSound(isActuallyRunning); footstepTimer = 0; }
+                    camera.position.y = getTerrainHeight(playerPos.x, playerPos.z) + 2.5 + Math.sin(bobbingTimer) * bobInt;
+                } else { camera.position.y += ((getTerrainHeight(playerPos.x, playerPos.z) + 2.5) - camera.position.y) * 0.1; }
+
+                nearbyNote = null; nearbyWheat = null; nearbyCar = false; nearAbyss = false;
+                document.getElementById('interaction-prompt').style.display = 'none';
+                let distToCave = Math.hypot(playerPos.x - cavePos.x, playerPos.z - cavePos.z); if (distToCave < 22) nearAbyss = true;
+
+                const raycaster = new THREE.Raycaster(); raycaster.setFromCamera({ x: 0, y: 0 }, camera); raycaster.far = 4.5;
+                const intersectsNote = raycaster.intersectObjects(notes); if (intersectsNote.length > 0) nearbyNote = intersectsNote[0].object;
+                const intersectsWheat = raycaster.intersectObjects(wheats.map(w => w.hitbox)); if (intersectsWheat.length > 0) nearbyWheat = wheats.find(w => w.hitbox === intersectsWheat[0].object);
+
+                if (nearbyNote) { document.getElementById('interaction-prompt').innerHTML = 'Tekan <span class="key">E</span> Ambil Kertas'; document.getElementById('interaction-prompt').style.display = 'block'; }
+                else if (nearbyWheat) { document.getElementById('interaction-prompt').innerHTML = 'Tekan <span class="key">E</span> Panen Gandum'; document.getElementById('interaction-prompt').style.display = 'block'; }
+                else if (nearAbyss) { if (wheatInventory > 0) { document.getElementById('interaction-prompt').innerHTML = 'Tekan <span class="key">E</span> Lempar Gandum ke Abyss'; } else { document.getElementById('interaction-prompt').innerHTML = '<span style="color:#ff5555">Abyss Lapar... Panen Gandum Dulu!</span>'; } document.getElementById('interaction-prompt').style.display = 'block'; }
+                else if (Math.hypot(playerPos.x - carPos.x, playerPos.z - carPos.z) < 6) { nearbyCar = true; document.getElementById('interaction-prompt').innerHTML = notesCollected < 7 ? 'Tekan <span class="key">E</span> Kabur' : 'Tekan <span class="key">E</span> Pulang'; document.getElementById('interaction-prompt').style.display = 'block'; }
+
+                if (monsterAwake) {
+                    enemy.lookAt(playerPos.x, enemy.position.y, playerPos.z);
+                    const distXZ = Math.hypot(enemy.position.x - playerPos.x, enemy.position.z - playerPos.z); let enemySpeed = 16.5;
+                    if (distXZ > 2.0) {
+                        enemy.translateZ(enemySpeed * delta); enemy.position.y = getTerrainHeight(enemy.position.x, enemy.position.z);
+                        let swing = Math.sin(time * 0.02) * 1.5; enemy.userData.lLeg.rotation.x = swing; enemy.userData.rLeg.rotation.x = -swing; enemy.userData.lArm.rotation.x = -swing; enemy.userData.rArm.rotation.x = swing;
+                        monsterFootstepTimer += delta; if (monsterFootstepTimer > 0.25) { playMonsterFootstepSound(); monsterFootstepTimer = 0; }
+                    } else { triggerGameOver(); }
+                }
+            }
+            prevTime = time; renderer.render(scene, camera);
+        }
+    </script>
+</body>
+
+</html>
