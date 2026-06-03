@@ -1,0 +1,2 @@
+# pubs
+Proyek AI gw
